@@ -1,0 +1,85 @@
+---
+description: AI-SE 项目路由、上下文来源与协作红线（每次会话必读）
+alwaysApply: true
+enabled: true
+updatedAt: 2026-11-13T00:00:00.000Z
+provider:
+---
+
+# AI-SE 协作规则：项目路由与上下文来源
+
+> 移植自 dzmm-nestjs 的协作规则层，按 AI-SE 技术栈适配（2026-11-13）。
+> 本文件只管 **AI 协作行为**。工程约束正本仍是 `AGENTS.md`、`docs/16-vibe-coding-rules.md` 与各冻结契约；冲突时以正本和实际代码为准，并报告冲突，不默默对齐。
+
+## 重要度标记
+
+- P0 = 违反即整轮作废 / 停下返工；P1 = 影响质量与耗时，默认遵守；P2 = 细节取舍，有余力才做。精力按 P0 > P1 > P2 分。
+- 引用一律按**条款名**，不按编号。外置条款正文在 `docs/rules/ai-se-redlines.md`。
+
+## 仓库速览
+
+| 目录 | 技术栈 | 说明 |
+| --- | --- | --- |
+| `apps/server/` | Express 5 + Zod 4 + pino（端口 3000） | `src/index.ts` 组合根、`src/routes/`（按资源一文件）、`src/services/`（业务逻辑）、`src/http/`（错误映射 / 请求日志 / 统一响应） |
+| `apps/web/` | Vue 3 + Vite 8 + Pinia 4 + vue-router 5 + Tailwind 4 + reka-ui（端口 5173） | `src/views/`、`src/viewmodels/`、`src/stores/`、`src/api/`（fetch 封装）、`src/components/`、`src/composables/`、`src/__tests__/` |
+| `packages/` | TypeScript workspace 包 | `shared`（跨包类型 / 契约唯一来源）、`database`（PostgreSQL 迁移与 Pg* 存储）、`agent-core`、`workflow-engine`、`tool-runtime`、`sandbox`、`mcp`、`eval`、`observability` 等 |
+| `docs/` | Markdown，编号 `NN-<主题>.md` | 设计文档、阶段任务书 / 记录、验收清单、冻结契约（如 `docs/25-mcp-contract-freeze.md`） |
+| `examples/` | 独立示例项目 | **不在 pnpm workspace 内**，禁止从中导入 workspace 包做测试 |
+| `infrastructure/` / `patches/` | Docker / 部署、pnpm 补丁 | 非业务主链路，按需了解 |
+
+## 上下文来源（AI 该读什么，按顺序）
+
+1. `[P1]` `AGENTS.md`（as-built 正本）→ `docs/16-vibe-coding-rules.md` → 冻结契约。
+2. `[P1]` 任务点名的 `docs/NN-*.md` 任务书 / 阶段记录，再对照实际代码核实。
+3. `[P1]` 相关源码：`apps/server/src/`、`apps/web/src/`、`packages/<pkg>/src/`；跨包类型只认 `packages/shared/src/`。
+4. `[P0]` 运行事实：接口返回、server pino 日志、`GET /api/workflows/:id/trace`、`GET /api/metrics`、`workflow_events` / `tool_calls` / `agent_runs`。**代码权威于文档**（`AGENTS.md` §9）。
+5. `[P1]` 命中代码链路 / UI / 后端 / 沟通条款 → 读 `docs/rules/ai-se-redlines.md` 对应节。
+
+`[P0]` 构建产物只存在于各包 `dist/`：禁止读取或"修复" `dist/` 内文件；权威参考是各包 `src/` 与依赖的 `.d.ts`。
+
+## 技术栈边界
+
+- `[P0]` 引入新依赖 / 换库 / 改 `pnpm-workspace.yaml`、`tsconfig.base.json`、`eslint.config.mjs`、Vite 或 Docker 配置前，须取得用户明确确认；确认前不得 `pnpm add`、不得改 `pnpm-lock.yaml`。新依赖必须说明原因、版本与兼容性（`docs/16-vibe-coding-rules.md` 第 8 条）。
+- `[P0]` 一端选型不自动授权另一端：`apps/web`（Vue）、`apps/server`（Express）、`packages/*` 各自独立（呼应「最小范围」）。
+- `[P1]` 现有选型固定：Node 22 / pnpm 12 / TypeScript / Vue 3 + Vite + Pinia / Express + Zod / PostgreSQL + Redis / LangGraph + LangChain / Vitest + Playwright；不擅自引入替代库。
+- `[P1]` 架构不变量沿用 `AGENTS.md` §10（Tool Runtime 唯一执行路径、禁止第二套 Permission / Approval / Audit / Secret / 错误码体系），本文件不复述。
+
+## 常驻红线（速查）
+
+| 条款 | 一句话 | 触发场景 |
+| --- | --- | --- |
+| 意图先复述 + 影响面分析 | 开工前一句技术语言复述，带类型标签，直接执行 | 任何开发任务 |
+| 先读事实再动手 | 读代码 / 页面 / 配置再定做法；不反问仓库能证明的事实 | 任何任务 |
+| 禁止猜测后自动执行 | 未核实的东西不执行，不配默认后续行为 | 事实不清时 |
+| 讲链路·讲机制照本宣科 | 只陈述代码原文 + 触发链 + 生命周期 | "这个字段从哪来""流程是什么" |
+| 指令即方法 | 用户附带操作指令时直接执行 | "直接告诉我 X""不需要思考" |
+| 决策点记录 / 开工不需要闸门 | 歧义压成一行「待确认：…」，该点不执行、不阻塞其余 | 一句话多种解释 |
+| 最小范围 + 阶段纪律 | 只改必需部分；一次只做一个已命名阶段，做完即停 | 准备动文件 |
+| 排查铁律——取证优先于推理 | 先布点取证，不列候选原因 | 报错 / 不生效 / 为什么 |
+| 源头冲突时以事实为准 / 用户操作即事实 | 日志数据优先于代码推测；用户说点了就是点了 | 数据与代码冲突 |
+| 接口字段以契约源为准 | 字段名 / 可空性 / 类型以契约原文为准 | 新增 / 修改接口 |
+| 符号删除·改名·移动扫引用 | 同步更新调用方、文档、任务书、测试断言 | 删 / 改名 / 移动 |
+| Git 动作须独立授权 | 交接报告 / 提交说明 ≠ `add` / `commit` / `push` 授权 | 任何 Git 写操作 |
+| TODO 必须 md 记录 | 待办落 `docs/TODO.md`，不留在代码注释里 | 产生待办时 |
+| 是非提问只回答有无 | 答"有 N 处 / 没有"，没有就补上 | "有没有 X" |
+| 汇报口径：结论先行，技术折叠 | 第一段只写用户看到的变化 | 任何交付汇报 |
+| 要用户验证：屏幕视角五段 / 验不了四件事 | 五段齐全；四件事写全 | 请用户验 / 报验不了 |
+| UI/DOM 与契约变更红线 / 禁止嵌套滚动 / 四态齐全 | 删改需单独确认；只许一层滚动；四态齐全 | 任何 UI 改动 |
+
+`[P0]` **Git 动作须独立授权**：生成交接报告或提交说明，不等于获得 `git add` / `commit` / `push` 授权；创建 / 切换分支同样需用户明确指示。
+
+`[P1]` **TODO 必须 md 记录**：待办、待改造、已知待修问题记入 `docs/TODO.md`（含日期、内容、目标文件、完成状态），不得只写在代码注释里；完成后同步状态。
+
+`[P1]` **仓库现状事实**：本仓库**有 git**（`main` 跟踪 `origin/main`），变更核对可用 `git status` / `git diff`。`AGENTS.md` §1「该目录没有 git」为历史描述，与事实冲突——按 §9「代码权威于文档」报告，不擅自修改。
+
+`[P2]` **载体说明**：`.codebuddy/` 为 AI 规则载体，经本次任务明确要求新增，不属于业务顶层目录；规则正文放 `docs/rules/`，不占用 `docs/NN-<主题>.md` 编号序列；除此之外不新增顶层目录（`AGENTS.md` §2）。规则无 `.trae` 双份，本仓库不维护双宿主。
+
+## 外置条款索引
+
+| 条款类 | 命中场景 | 正文位置 |
+| --- | --- | --- |
+| 意图与影响面分析 | 准备动手改文件 / UI / 接口前 | `docs/rules/ai-se-redlines.md` §1 |
+| 代码链路类 | 排查 / 契约源 / 删改符号 / Git 排障 | `docs/rules/ai-se-redlines.md` §2 |
+| UI 类 | 改 `apps/web` 界面 / 交互 | `docs/rules/ai-se-redlines.md` §3 |
+| 后端·数据·测试类 | 改 `apps/server` / `packages/database` / 迁移 | `docs/rules/ai-se-redlines.md` §4 |
+| 沟通类 | 请用户验证 / 汇报 / 报验不了 | `docs/rules/ai-se-redlines.md` §5 |
