@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "pnpm --filter @ai-se/tool-runtime build && pnpm --filter @ai-se/action-policy build && tsc -p tsconfig.json && cp src/testing/fake-server-entry.js dist/testing/fake-server-entry.js && cp src/testing/fake-http-server-entry.js dist/testing/fake-http-server-entry.js && cp src/testing/fake-capabilities.js dist/testing/fake-capabilities.js && cp src/testing/external-system-entry.js dist/testing/external-system-entry.js",
+    "build": "pnpm --filter @ai-se/tool-runtime build && pnpm --filter @ai-se/action-policy build && tsc -p tsconfig.json && node -e \"for (const f of ['fake-server-entry.js','fake-http-server-entry.js','fake-capabilities.js','external-system-entry.js']) require('fs').copyFileSync('src/testing/'+f,'dist/testing/'+f)\"",
     "lint": "eslint \"src/**/*.ts\"",
     "typecheck": "pnpm --filter @ai-se/tool-runtime build && pnpm --filter @ai-se/action-policy build && tsc -p tsconfig.json --noEmit",
     "test": "vitest run src"

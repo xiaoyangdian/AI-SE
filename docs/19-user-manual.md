@@ -181,6 +181,64 @@ VITE_API_BASE_URL=http://localhost:3000 pnpm --filter @ai-se/web dev
 
 打开 `http://localhost:5173`。
 
+### 3.4 Windows（PowerShell）启动
+
+根脚本的 `pnpm dev` 用 POSIX shell 语法加载 `.env`（`set -a`、`[ -f .env ]`、`.`），
+Windows 下 pnpm 默认使用 `cmd.exe`，所以 `pnpm dev` 在 Windows 不可用。
+请按 3.3 的手动分步模式启动：Server、Web 与数据库迁移本身都跨平台，
+`@ai-se/mcp` 的构建也已改用 Node 内置文件复制，不依赖 `cp`。
+
+前置条件：
+
+- Node 22.22.2（见 `.nvmrc`）、`corepack pnpm` 12.3.4、`pnpm install --frozen-lockfile` 已完成。
+- Docker Desktop 已启动。Windows 建议使用 WSL2 后端；若提示「未安装适用于 Linux 的 Windows 子系统」，
+  先执行 `wsl --install` 并重启，再启动 Docker Desktop。
+- 仓库根目录已有 `.env`（默认 `LLM_PROVIDER=mock`，无需模型凭据）。
+
+第一步，准备 `.env` 并把变量注入当前终端（**每个终端都要各执行一次**；`.env` 不由代码读取）：
+
+```powershell
+Copy-Item .env.example .env   # 仅首次
+
+Get-Content ./.env | ForEach-Object {
+  if ($_ -match '^\s*([A-Za-z_][A-Za-z0-9_]*)=(.*)$') {
+    [Environment]::SetEnvironmentVariable($Matches[1], $Matches[2], "Process")
+  }
+}
+```
+
+第二步，启动基础依赖并执行迁移：
+
+```powershell
+docker compose up -d --wait postgres redis
+corepack pnpm --filter @ai-se/database migrate
+```
+
+第三步，在终端 A 启动 Server：
+
+```powershell
+corepack pnpm --filter @ai-se/server dev
+```
+
+第四步，另开终端 B（先重复第一步注入 `.env`）启动 Web：
+
+```powershell
+corepack pnpm --filter @ai-se/web dev
+```
+
+打开 `http://localhost:5173`；健康检查：
+
+```powershell
+curl.exe http://localhost:3000/health
+curl.exe http://localhost:3000/ready
+```
+
+`VITE_API_BASE_URL` 保持为空即可：前端走同源 `/api`，由 Vite 代理到 `:3000`（见 `vite.config.ts`）。
+3.3 里的 `VITE_API_BASE_URL=http://localhost:3000 pnpm ...` 是 bash 的内联环境变量写法，PowerShell 不支持。
+
+停止：终端中 Ctrl+C 停止前后端；基础依赖用 `docker compose down` 停止
+（不要用 `down -v`，除非确定要清空数据）。
+
 ## 4. 常用页面
 
 | 页面       | 地址                               | 用途                                                   |
